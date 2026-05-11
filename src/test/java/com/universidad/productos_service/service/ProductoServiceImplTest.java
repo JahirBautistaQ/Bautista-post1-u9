@@ -14,6 +14,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
+
+
+
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceImplTest {
 
@@ -69,4 +77,48 @@ class ProductoServiceImplTest {
 
         assertEquals(50.0, resultado.getPrecio());
     }
+
+@Test
+void buscarPorId_noExistente_lanzaRuntimeException() {
+
+    when(productoRepository.findById(99L))
+            .thenReturn(Optional.empty());
+
+    assertThrows(
+            RuntimeException.class,
+            () -> productoService.buscarPorId(99L)
+    );
+}
+
+@ParameterizedTest
+@NullAndEmptySource
+@ValueSource(strings = {" ", "\t", "\n"})
+void crear_nombreInvalido_lanzaIllegalArgumentException(
+        String nombre
+) {
+
+    assertThrows(
+            IllegalArgumentException.class,
+            () -> productoService.crear(nombre, 100.0, 5)
+    );
+
+    // El repositorio NO debe ser llamado
+    verifyNoInteractions(productoRepository);
+}
+
+@ParameterizedTest
+@ValueSource(doubles = {0.0, -1.0, -100.0, -0.01})
+void crear_precioInvalido_lanzaIllegalArgumentException(
+        double precio
+) {
+
+    assertThrows(
+            IllegalArgumentException.class,
+            () -> productoService.crear("Producto", precio, 5)
+    );
+
+    verifyNoInteractions(productoRepository);
+}
+
+
 }
