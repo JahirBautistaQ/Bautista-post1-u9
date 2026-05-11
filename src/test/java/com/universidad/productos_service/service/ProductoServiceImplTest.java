@@ -20,6 +20,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+
 
 
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +33,9 @@ class ProductoServiceImplTest {
 
     @InjectMocks
     private ProductoServiceImpl productoService;
+
+    @Captor
+    private ArgumentCaptor<Producto> productoCaptor;
 
     @Test
     void crear_datosValidos_retornaProductoGuardado() {
@@ -120,5 +126,63 @@ void crear_precioInvalido_lanzaIllegalArgumentException(
     verifyNoInteractions(productoRepository);
 }
 
+@Test
+void crear_nombreConEspacios_guardaNombreNormalizado() {
+
+    when(productoRepository.save(any()))
+            .thenAnswer(invocation -> {
+
+                Producto p = invocation.getArgument(0);
+
+                p.setId(1L);
+
+                return p;
+            });
+
+    productoService.crear(
+            " Laptop Pro ",
+            1500.0,
+            5
+    );
+
+    verify(productoRepository)
+            .save(productoCaptor.capture());
+
+    Producto capturado = productoCaptor.getValue();
+
+    // nombre normalizado con strip()
+    assertEquals("Laptop Pro", capturado.getNombre());
+
+    assertEquals(1500.0, capturado.getPrecio());
+
+    // id todavía null antes de persistirse
+    assertEquals(1L, capturado.getId());
+}
+
+@Test
+void eliminar_productoExistente_llamaDeleteById() {
+
+    Producto producto = new Producto(
+            1L,
+            "Teclado",
+            80.0,
+            20
+    );
+
+    when(productoRepository.findById(1L))
+            .thenReturn(Optional.of(producto));
+
+    doNothing()
+            .when(productoRepository)
+            .deleteById(1L);
+
+    productoService.eliminar(1L);
+
+    verify(productoRepository, times(1))
+            .deleteById(1L);
+
+    verify(productoRepository, times(1))
+            .findById(1L);
+}
 
 }
